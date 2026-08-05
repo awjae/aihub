@@ -1,0 +1,136 @@
+// ─────────────────────────────────────────────────────────────
+// AI Hub 설정 — 모델과 앱(폼)을 정의합니다.
+//
+//   models : "어떻게 말을 걸고 어떻게 답을 읽는가"
+//            fine-tuned 모델은 이 규약이 학습 데이터로 정해져 있으므로 모델이 소유합니다.
+//   apps   : "사용자에게 어떻게 보이는가"
+//            모델을 이름으로 참조하고, 폼만 정의합니다.
+//
+// → 모델 추가 = models 에 항목 하나
+// → 폼 추가   = apps 에 항목 하나 (같은 모델을 여러 앱이 공유 가능)
+//
+// 서버 재시작 없이 반영하려면 POST /api/apps/reload 를 호출하세요.
+// 잘못된 정의는 어디가 문제인지 알려주고, 기존 정의는 그대로 유지됩니다.
+//
+// JSONC 입니다 — 주석(//, /* */)과 후행 쉼표를 쓸 수 있습니다.
+// 여러 줄 문자열은 배열로 쓰면 줄바꿈으로 이어집니다.
+// ─────────────────────────────────────────────────────────────
+{
+  // 에디터 자동완성·검증용. 서버는 무시합니다.
+  // (server/ 에서 `npm run schema` 로 재생성 — 손으로 고치지 마세요)
+  "$schema": "./apps.schema.json",
+
+  "models": {
+    "vet-diagnosis": {
+      "provider": "openai",
+      "model": "ft:gpt-4o-mini-2024-07-18:personal:vet-supporter:CajBaDup",
+      "maxTokens": 2000,
+
+      // ⚠️ systemPrompt / userTemplate 은 학습 JSONL 의 messages[0] / messages[1] 과
+      //    그대로 일치해야 합니다. 어긋나면 모델이 학습한 패턴을 못 찾습니다.
+      "systemPrompt": "당신은 수의학 전문 AI 어시스턴트입니다. 동물병원에서 근무하는 수의사를 지원합니다.",
+
+      // 배열의 각 원소가 한 줄. 구분자는 콜론(:)이 아니라 괄호(`Objective)`).
+      // 값이 비어 있는 항목의 줄은 렌더링 시 통째로 빠집니다.
+      //   예) Objective 만 입력 → "Objective) …" 한 줄만 전송
+      "userTemplate": ["Subjective) {{subjective}}", "Objective) {{objective}}"],
+
+      // 이 모델의 출력 형식:
+      //   [code]: MASS-01159 [name]: Otitis Externa [name_ko]: 외이염
+      //
+      // marker 로 키를 잘라내고, 이미 나온 키가 다시 나오면 다음 레코드로 봅니다.
+      // → 진단이 여러 개면 "추천 진단 1, 2, 3…" 카드가 자동으로 늘어납니다.
+      // 파싱에 실패하면 모델 원문을 그대로 보여줍니다.
+      "responseFormat": {
+        "type": "records",
+        "itemLabel": "추천 진단",
+        "marker": "[{key}]:",
+        "rows": [
+          // 값이 빈 {key} 는 빠지고, 남는 빈 괄호도 정리됩니다.
+          { "label": "진단명", "value": "{name_ko} ({name})" },
+          { "label": "마스터 코드", "value": "{code}", "style": "code" }
+        ]
+      }
+    }
+
+    // ── 모델 추가 예시 ───────────────────────────────────────
+    //
+    // "vet-treatment": {                    // 다른 fine-tuned 모델
+    //   "provider": "openai",
+    //   "model": "ft:gpt-4o-mini-…:treatment:…",
+    //   "userTemplate": ["Assessment) {{assessment}}"],
+    //   "responseFormat": { "type": "text" }
+    // },
+    //
+    // "internal-llama": {                   // 사내 vLLM — 엔드포인트·키가 다름
+    //   "provider": "openai",               // OpenAI 호환이면 openai
+    //   "baseURL": "http://vllm.internal:8000/v1",
+    //   "apiKeyEnv": "VLLM_TOKEN",          // 키 "값"이 아니라 환경변수 "이름"
+    //   "model": "llama-3-70b-vet",
+    //   "userTemplate": ["{{question}}"]
+    // },
+    //
+    // "claude": {                           // Anthropic
+    //   "provider": "anthropic",
+    //   "model": "claude-sonnet-5",
+    //   "thinking": "disabled",             // adaptive(기본) | disabled
+    //   "effort": "low",                    // low | medium | high | xhigh | max
+    //   "systemPrompt": ["너는 ... 이다."],
+    //   "userTemplate": ["{{question}}"]
+    // }
+  },
+
+  "apps": [
+    {
+      "id": "diagnosis-predictor",
+      "name": "진단 예측 AI",
+      "description": "2025년 11월 기준 SO영역과 진단이 성실하게 작성된 차트 데이터 7200여개를 토대로 학습된 AI 입니다.",
+      "icon": "🩺",
+      "group": "진료 지원",
+
+      "model": "vet-diagnosis",
+
+      // 개별 항목은 선택이지만, 이 중 최소 하나는 반드시 입력되어야 합니다.
+      "requireOneOf": ["subjective", "objective"],
+
+      "fields": [
+        {
+          "key": "subjective",
+          "label": "Subjective",
+          "type": "textarea",
+          "rows": 8,
+          "minLength": 10,
+          "placeholder": "보호자 문진 내용, 주호소, 병력 등을 입력하세요.",
+          "default": "- 주간 대부분 잠만잠 - 소화기 증상없음"
+        },
+        {
+          "key": "objective",
+          "label": "Objective",
+          "type": "textarea",
+          "rows": 8,
+          "minLength": 10,
+          "placeholder": "신체검사 소견, 활력징후, 검사 수치 등을 입력하세요.",
+          "default": "1.P/E BW: 4.72, T 38.3, P 66, RR 24 2.B/A -ALT 175->277 , ALP 516-> 378 -crp: 52.4->34.6 [복부초음파_Local scan] Comment - GB : 담낭벽 약 0.8<- 0.9 <- 1.2 <- 1.3mm로 유사. crystal유사하며 sludge는 경미하게 감소되어 관찰됨 - Liver : 간 에코 및 세밀도 이전과 유사. 이전 관찰된 저에코 결절 8.8x12.1 <- 9.4x12.2<- 6.9x9.4 <- 6.1x4.1mm로 크기 및 에코 유사 추가로 관찰된 결절은 약 13.1x9 <- 13.3x7.9<- 13.1x10.2mm 로 유사하게 관찰됨"
+        }
+      ],
+
+      "mcpServers": []
+    }
+
+    // ── 폼 추가 예시 ─────────────────────────────────────────
+    // 같은 모델을 쓰는 다른 폼도 만들 수 있습니다 (프롬프트 규약은 모델이 소유).
+    //
+    // {
+    //   "id": "diagnosis-quick",
+    //   "name": "빠른 진단 조회",
+    //   "icon": "⚡",
+    //   "group": "진료 지원",
+    //   "model": "vet-diagnosis",           // 위와 같은 모델 재사용
+    //   "requireOneOf": ["objective"],
+    //   "fields": [
+    //     { "key": "subjective", "label": "S", "type": "text" },
+    //     { "key": "objective",  "label": "O", "type": "textarea", "rows": 4, "minLength": 10 }
+    //   ]
+    // }
+  ]
+}

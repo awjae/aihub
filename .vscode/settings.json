@@ -1,0 +1,17 @@
+{
+  // config/*.json 은 주석을 허용하는 JSONC 로 취급한다.
+  // (서버는 이미 JSONC 로 파싱하지만, 에디터가 순수 JSON 으로 검사하면 주석마다 빨간 줄이 뜬다)
+  "files.associations": {
+    "**/config/apps.json": "jsonc",
+    "**/config/mcp.json": "jsonc",
+    "**/config/*.jsonc": "jsonc"
+  },
+
+  // 앱 정의에 자동완성과 실시간 검증을 붙인다 — 오타를 저장 전에 잡아준다.
+  "json.schemas": [
+    {
+      "fileMatch": ["**/config/apps.json", "**/config/apps.jsonc"],
+      "url": "./config/apps.schema.json"
+    }
+  ]
+}

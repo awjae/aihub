@@ -1,0 +1,359 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI Hub 설정",
+  "$comment": "자동 생성 파일입니다. 손으로 고치지 마세요 — server/npm run schema 로 재생성됩니다.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "에디터 자동완성용. 서버는 무시합니다.",
+      "type": "string"
+    },
+    "models": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "anthropic",
+              "openai",
+              "azure"
+            ],
+            "description": "openai 는 사내 vLLM 등 OpenAI 호환 엔드포인트도 포함합니다."
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "description": "모델 ID. Azure 는 배포 이름(deployment name)."
+          },
+          "baseURL": {
+            "description": "이 모델만 다른 엔드포인트를 쓸 때. 생략하면 프로바이더 기본값.",
+            "type": "string",
+            "format": "uri"
+          },
+          "apiKeyEnv": {
+            "description": "이 모델에 쓸 API 키가 담긴 환경변수 이름. 값이 아니라 \"이름\"입니다.",
+            "type": "string",
+            "pattern": "^[A-Z0-9_]+$"
+          },
+          "maxTokens": {
+            "default": 4096,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "thinking": {
+            "description": "Anthropic 전용",
+            "type": "string",
+            "enum": [
+              "adaptive",
+              "disabled"
+            ]
+          },
+          "effort": {
+            "description": "Anthropic 전용",
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ]
+          },
+          "systemPrompt": {
+            "description": "학습 데이터의 system 메시지와 일치시키세요.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          },
+          "userTemplate": {
+            "description": "user 메시지 템플릿. {{key}} 에 폼 입력값이 치환되고, 값이 전부 빈 줄은 제거됩니다.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          },
+          "responseFormat": {
+            "default": {
+              "type": "text"
+            },
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "text"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "records"
+                  },
+                  "itemLabel": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "카드 제목. \"추천 진단\" → \"추천 진단 1\", \"추천 진단 2\""
+                  },
+                  "marker": {
+                    "type": "string",
+                    "description": "값 앞에 오는 마커. {key} 자리에 키 이름이 들어갑니다."
+                  },
+                  "rows": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "카드에 표시할 항목명 (예: 진단명)"
+                        },
+                        "value": {
+                          "type": "string",
+                          "pattern": "\\{[a-zA-Z0-9_]+\\}",
+                          "description": "{key} 에 파싱된 값이 치환됩니다. 예: {name_ko} ({name})"
+                        },
+                        "style": {
+                          "description": "code 면 등폭 폰트로 표시",
+                          "type": "string",
+                          "enum": [
+                            "text",
+                            "code"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "value"
+                      ],
+                      "additionalProperties": false,
+                      "description": "레코드 카드의 한 행"
+                    }
+                  }
+                },
+                "required": [
+                  "type",
+                  "itemLabel",
+                  "marker",
+                  "rows"
+                ],
+                "additionalProperties": false
+              }
+            ],
+            "description": "응답 영역 표시 방식. 모델의 출력 포맷에 맞춰 정의합니다."
+          }
+        },
+        "required": [
+          "provider",
+          "model",
+          "userTemplate"
+        ],
+        "additionalProperties": false,
+        "description": "모델 연결 + 프롬프트/응답 규약"
+      },
+      "description": "모델 이름 → 모델 정의. 앱이 이 이름을 참조합니다."
+    },
+    "apps": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+            "description": "식별자. URL 해시(#my-app)로 직접 진입할 수 있습니다."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "화면에 표시될 앱 이름"
+          },
+          "description": {
+            "description": "사이드바에 표시될 한 줄 설명",
+            "type": "string"
+          },
+          "icon": {
+            "description": "이모지 아이콘 (예: 🩺)",
+            "type": "string"
+          },
+          "group": {
+            "description": "사이드바 그룹명",
+            "type": "string"
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "description": "models 에 정의한 모델 이름"
+          },
+          "fields": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z0-9_]+$",
+                  "description": "모델 userTemplate 의 {{key}} 와 대응합니다."
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "입력 칸 위에 표시될 항목명"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "textarea",
+                    "select",
+                    "number",
+                    "checkbox"
+                  ]
+                },
+                "required": {
+                  "description": "비어 있으면 실행 거부",
+                  "type": "boolean"
+                },
+                "placeholder": {
+                  "type": "string"
+                },
+                "help": {
+                  "description": "입력 칸 아래 설명",
+                  "type": "string"
+                },
+                "rows": {
+                  "description": "textarea 높이(줄 수)",
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "options": {
+                  "description": "select 타입의 선택지",
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "default": {
+                  "description": "폼 초기값. 여러 줄이면 문자열 배열로. (defaultValue 아님)",
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  ]
+                },
+                "min": {
+                  "description": "number 전용",
+                  "type": "number"
+                },
+                "max": {
+                  "description": "number 전용",
+                  "type": "number"
+                },
+                "minLength": {
+                  "description": "text·textarea. 앞뒤 공백 제외 길이 기준.",
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "maxLength": {
+                  "description": "text·textarea. 앞뒤 공백 제외 길이 기준.",
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "key",
+                "label",
+                "type"
+              ],
+              "additionalProperties": false
+            },
+            "description": "입력 폼 정의"
+          },
+          "requireOneOf": {
+            "default": [],
+            "description": "나열한 필드 중 최소 하나는 입력되어야 실행됩니다.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "mcpServers": {
+            "default": [],
+            "description": "mcp.json 에 정의한 서버 이름. 비우면 툴 없이 프롬프트만.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "model",
+          "fields"
+        ],
+        "additionalProperties": false,
+        "description": "앱(폼) 정의"
+      }
+    }
+  },
+  "required": [
+    "models",
+    "apps"
+  ],
+  "additionalProperties": false,
+  "description": "AI Hub 설정 — 모델과 앱(폼)을 정의합니다."
+}

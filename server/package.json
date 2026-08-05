@@ -1,0 +1,35 @@
+{
+  "name": "aihub-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "사내 AI 게이트웨이 - NestJS 백엔드",
+  "scripts": {
+    "build": "nest build",
+    "schema": "tsx scripts/generate-schema.ts",
+    "start": "node dist/main.js",
+    "start:dev": "nest start --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.115.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@nestjs/common": "^11.1.28",
+    "@nestjs/core": "^11.1.28",
+    "@nestjs/platform-express": "^11.1.28",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "openai": "^7.4.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.10",
+    "@nestjs/schematics": "^11.0.9",
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.15.3",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.2"
+  }
+}
