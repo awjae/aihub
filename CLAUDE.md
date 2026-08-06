@@ -59,6 +59,13 @@ Clients are cached per `(baseURL, apiKeyEnv)` so different models can use differ
 
 `server/src/apps/schema.ts` (zod) is authoritative. `config/apps.schema.json` is a **generated artifact** for editor autocomplete — regenerate with `npm run schema` after touching schema rules; never hand-edit it.
 
+**Pre-commit obligation.** If a change touches `server/src/apps/schema.ts`, the regenerated `config/apps.schema.json` must be staged in the same commit — otherwise editor autocomplete silently diverges from what the server actually accepts.
+
+```bash
+npm --prefix server run schema
+git add config/apps.schema.json
+```
+
 Objects use `z.strictObject`, so unknown keys are rejected rather than ignored (a `defaultValue` typo previously failed silently). Cross-checks zod can't express — model reference exists, every `{{key}}` in `userTemplate` has a matching field, `requireOneOf` keys exist — live in `AppsService.load()`.
 
 Config is **JSONC**: comments and trailing commas allowed, parsed by `apps/jsonc.ts` (string-aware, so `https://` isn't treated as a comment). A `.yaml`/`.yml` extension in `APPS_CONFIG_PATH` switches to the YAML parser.
