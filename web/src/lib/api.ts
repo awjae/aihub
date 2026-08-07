@@ -1,4 +1,4 @@
-import type { AppSummary, StreamEvent } from './types';
+import type { AppSummary, StreamEvent, VpnStatus } from './types';
 
 export async function fetchApps(): Promise<AppSummary[]> {
   const response = await fetch('/api/apps');
@@ -12,15 +12,36 @@ export async function fetchApps(): Promise<AppSummary[]> {
  *
  * EventSource 는 POST 를 못 보내므로 fetch + ReadableStream 으로 직접 파싱한다.
  */
-export async function* runApp(
+export function runApp(
   appId: string,
   input: Record<string, unknown>,
   signal: AbortSignal,
 ): AsyncGenerator<StreamEvent> {
-  const response = await fetch(`/api/run/${encodeURIComponent(appId)}`, {
+  return streamSse<StreamEvent>(`/api/run/${encodeURIComponent(appId)}`, { input }, signal);
+}
+
+export async function fetchVpnStatus(signal?: AbortSignal): Promise<VpnStatus> {
+  const response = await fetch('/api/vpn/status', signal ? { signal } : undefined);
+  if (!response.ok) throw new Error(`VPN 상태를 불러오지 못했습니다 (HTTP ${response.status})`);
+  return (await response.json()) as VpnStatus;
+}
+
+/**
+ * 상태를 다시 재고, VPN 이 켜졌는데 아직 안 붙었으면 터널 재시도를 앞당긴다.
+ * openvpn 의 백오프가 최대 5분까지 벌어지므로 사용자가 기다리지 않게 하는 장치다.
+ */
+export async function recheckVpn(): Promise<VpnStatus> {
+  const response = await fetch('/api/vpn/recheck', { method: 'POST' });
+  if (!response.ok) throw new Error(`다시 확인하지 못했습니다 (HTTP ${response.status})`);
+  return (await response.json()) as VpnStatus;
+}
+
+/** POST 로 여는 SSE 를 이벤트 단위로 흘려준다. EventSource 는 POST 를 못 보낸다. */
+async function* streamSse<T>(url: string, body: unknown, signal: AbortSignal): AsyncGenerator<T> {
+  const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ input }),
+    body: JSON.stringify(body),
     signal,
   });
 
@@ -56,7 +77,7 @@ export async function* runApp(
         if (!payload) continue;
 
         try {
-          yield JSON.parse(payload) as StreamEvent;
+          yield JSON.parse(payload) as T;
         } catch {
           // 프레임이 깨진 경우는 조용히 무시하고 다음 프레임으로 넘어간다.
         }

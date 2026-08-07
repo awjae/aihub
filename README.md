@@ -277,6 +277,25 @@ data: {"type":"error","message":"..."}
 | `MCP_TOOL_TIMEOUT_MS`                                             | 툴 1회 타임아웃 (기본 60s)                       |
 | `MAX_TOOL_RESULT_CHARS`                                           | 툴 결과 절삭 길이 (기본 20,000자)                |
 | `CORS_ORIGIN`                                                     | 프론트가 다른 오리진일 때 (쉼표 구분)            |
+| `VPN_OVPN_CONFIG`                                                 | Client VPN `.ovpn` 경로. 비우면 VPN 기능 전체가 꺼짐 |
+| `VPN_PROBE_TARGET`                                                | 도달 확인 대상 `host:port` (비우면 `DATABASE_URL`)   |
+
+---
+
+## Client VPN (VPC 밖에 띄울 때만)
+
+VPC 내부 자원을 읽는 앱은 정의에 `"requiresVpn": true` 를 적습니다. 그러면 화면에 연결 상태가 뜨고, **실제로 닿기 전에는 실행 버튼이 잠깁니다** — 제출하고 수십 초 기다린 끝에 커넥션 실패만 보는 상황을 막기 위해서입니다.
+
+`VPN_OVPN_CONFIG` 가 비어 있거나 파일이 없으면 **기능 전체가 꺼지고 화면에도 아무것도 뜨지 않습니다.** VPC 안에 배포했다면 그대로 두세요.
+
+| 엔드포인트             | 하는 일                                                          |
+| ---------------------- | ---------------------------------------------------------------- |
+| `GET /api/vpn/status`  | 상태 조회. 폴링용이라 **아무것도 바꾸지 않습니다**               |
+| `POST /api/vpn/recheck`| 상태를 다시 재고, VPN 이 켜져 있으면 터널 재접속을 앞당깁니다     |
+
+> **서브넷 연결은 여기서 켜고 끄지 않습니다.** 접속이 없어도 연결 시간만큼 과금되므로 개발자가 akita 저장소의 `client-vpn.sh production on/off` 로 직접 제어하고, 게이트웨이는 그 상태를 따라가기만 합니다. 그래서 AWS 자격증명도 필요 없습니다.
+
+컨테이너 안에서 터널을 세우려면 `docker-compose.yml` 의 `cap_add: NET_ADMIN` · `devices: /dev/net/tun` · `user: root` 주석을 풀어야 합니다. 기본 권한을 올리지 않으려고 옵트인으로 두었습니다.
 
 ---
 

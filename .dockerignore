@@ -3,6 +3,11 @@
 **/.env
 **/.env.*
 !**/.env.example
+
+# Dockerfile 이 config/ 를 통째로 이미지에 굽는다. .ovpn 에는 클라이언트 인증서와
+# 개인키가 들어 있으므로 레이어에 박히지 않게 컨텍스트에서 뺀다 — 런타임 마운트로만
+# 들어간다. (.gitignore 에도 같은 항목이 있다. 이름을 바꾸면 양쪽 모두 갱신할 것)
+**/*.ovpn
 **/*.log
 .git
 .gitignore

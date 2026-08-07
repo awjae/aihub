@@ -14,6 +14,17 @@ export interface AppConfig {
   mcpToolTimeoutMs: number;
   maxToolResultChars: number;
   openai: { apiKey?: string; baseURL?: string };
+  vpn: VpnConfig;
+}
+
+/**
+ * Client VPN. VPC 밖에서 게이트웨이를 띄울 때만 씁니다.
+ * ovpnConfig 파일이 없으면 기능 전체가 꺼진 것으로 봅니다 — 그 편이 안전한 기본값입니다.
+ */
+export interface VpnConfig {
+  ovpnConfig?: string;
+  /** 도달 확인 대상. 비우면 DATABASE_URL 에서 뽑습니다. */
+  probeTarget?: string;
 }
 
 export function loadConfiguration(): AppConfig {
@@ -28,6 +39,10 @@ export function loadConfiguration(): AppConfig {
     openai: {
       apiKey: process.env.OPENAI_API_KEY || undefined,
       baseURL: process.env.OPENAI_BASE_URL || undefined,
+    },
+    vpn: {
+      ovpnConfig: process.env.VPN_OVPN_CONFIG || undefined,
+      probeTarget: process.env.VPN_PROBE_TARGET || undefined,
     },
   };
 }

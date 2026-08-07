@@ -138,6 +138,11 @@ export const appSchema = z
       .optional()
       .default([])
       .describe('mcp.json 에 정의한 서버 이름. 비우면 툴 없이 프롬프트만.'),
+    requiresVpn: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe('VPC 내부 자원을 쓰는 앱. 연결되기 전에는 실행 버튼이 잠깁니다.'),
   })
   .describe('앱(폼) 정의');
 

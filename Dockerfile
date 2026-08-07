@@ -34,6 +34,11 @@ RUN npm ci --omit=dev && npm cache clean --force
 FROM node:22-alpine AS runtime
 WORKDIR /app
 
+# Client VPN 제어용. VPC 밖에서 띄울 때만 실제로 쓰이며, 쓰려면 컨테이너에
+# NET_ADMIN 과 /dev/net/tun 이 있어야 한다 (docker-compose.yml 참고).
+# 설치만으로는 아무 권한도 늘지 않는다.
+RUN apk add --no-cache openvpn
+
 ENV NODE_ENV=production \
     PORT=3000 \
     APPS_CONFIG_PATH=/app/config/apps.json \
