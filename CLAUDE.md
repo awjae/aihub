@@ -79,7 +79,7 @@ git add config/apps.schema.json
 
 Objects use `z.strictObject`, so unknown keys are rejected rather than ignored (a `defaultValue` typo previously failed silently). Cross-checks zod can't express — model reference exists, every `{{key}}` in `userTemplate` has a matching field, `requireOneOf` keys exist — live in `AppsService.load()`.
 
-Config is **JSONC**: comments and trailing commas allowed, parsed by `apps/jsonc.ts` (string-aware, so `https://` isn't treated as a comment). A `.yaml`/`.yml` extension in `APPS_CONFIG_PATH` switches to the YAML parser.
+Config is **JSONC**: comments and trailing commas allowed, parsed by `apps/jsonc.ts` (string-aware, so `https://` isn't treated as a comment). YAML support existed and was removed once nothing used it.
 
 ### Response rendering is config-driven
 

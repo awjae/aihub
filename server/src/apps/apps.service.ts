@@ -1,7 +1,5 @@
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { readFileSync } from 'node:fs';
-import { extname } from 'node:path';
-import { parse as parseYaml } from 'yaml';
 
 import { AppConfig, CONFIG } from '../config/configuration';
 import { AppDefinition, FieldDefinition, ModelDefinition, ResolvedApp } from './app-definition';
@@ -25,11 +23,7 @@ export class AppsService implements OnModuleInit {
   /** 설정 파일을 다시 읽어 메모리에 반영. 실패하면 기존 정의를 유지한다. */
   load(): { models: number; apps: number } {
     const path = this.config.appsConfigPath;
-    const raw = readFileSync(path, 'utf8');
-
-    // 확장자로 포맷을 고른다. JSON 을 기본으로 쓰되 기존 YAML 설정도 계속 동작한다.
-    const isYaml = ['.yaml', '.yml'].includes(extname(path).toLowerCase());
-    const parsed = isYaml ? parseYaml(raw) : parseJsonc(raw, path);
+    const parsed = parseJsonc(readFileSync(path, 'utf8'), path);
 
     const result = configSchema.safeParse(parsed);
     if (!result.success) {
