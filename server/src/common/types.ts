@@ -1,9 +1,9 @@
 /**
- * 프로바이더(Anthropic / OpenAI / Azure)에 상관없이 동일하게 쓰는
- * 중립 메시지 · 툴 포맷. 각 어댑터가 이 포맷 ↔ 벤더 포맷을 변환한다.
+ * 프로바이더에 상관없이 동일하게 쓰는 중립 메시지 · 툴 포맷.
+ * 각 어댑터가 이 포맷 ↔ 벤더 포맷을 변환한다.
  */
 
-export type ProviderName = 'anthropic' | 'openai' | 'azure';
+export type ProviderName = 'openai';
 
 export interface ToolCall {
   id: string;
@@ -42,9 +42,6 @@ export interface ChatRequest {
   messages: ChatMessage[];
   tools: ToolDefinition[];
   maxTokens: number;
-  /** Anthropic 전용 — 다른 프로바이더는 무시 */
-  thinking?: 'adaptive' | 'disabled';
-  effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 }
 
 /** 어댑터가 한 턴 동안 흘려보내는 이벤트 */

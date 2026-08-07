@@ -46,8 +46,6 @@ export class ChatService {
       messages: [{ role: 'user', content: prompt }],
       tools,
       maxTokens: model.maxTokens,
-      thinking: model.thinking,
-      effort: model.effort,
     };
 
     const session = this.providers.get(model.provider).createSession(request);

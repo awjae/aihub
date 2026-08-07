@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
 import { ProviderName } from '../common/types';
-import { AnthropicProvider } from './anthropic.provider';
 import { OpenAiProvider } from './openai.provider';
 import { ChatProvider } from './provider.interface';
 
@@ -9,8 +8,8 @@ import { ChatProvider } from './provider.interface';
 export class ProviderRegistry {
   private readonly providers: Record<ProviderName, ChatProvider>;
 
-  constructor(anthropic: AnthropicProvider, openai: OpenAiProvider, azure: OpenAiProvider) {
-    this.providers = { anthropic, openai, azure };
+  constructor(openai: OpenAiProvider) {
+    this.providers = { openai };
   }
 
   get(name: ProviderName): ChatProvider {
