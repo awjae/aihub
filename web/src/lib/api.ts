@@ -37,7 +37,11 @@ export async function recheckVpn(): Promise<VpnStatus> {
 }
 
 /** POST 로 여는 SSE 를 이벤트 단위로 흘려준다. EventSource 는 POST 를 못 보낸다. */
-async function* streamSse<T>(url: string, body: unknown, signal: AbortSignal): AsyncGenerator<T> {
+async function* streamSse<T>(
+  url: string,
+  body: unknown,
+  signal: AbortSignal,
+): AsyncGenerator<T> {
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

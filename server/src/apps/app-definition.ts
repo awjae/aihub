@@ -6,10 +6,13 @@ export type AppDefinition = ParsedApp;
 export type FieldDefinition = AppDefinition['fields'][number];
 export type ResponseFormat = ModelDefinition['responseFormat'];
 
-/** 앱과 그 앱이 참조하는 모델을 함께 묶은, 실행에 필요한 모든 것. */
+/**
+ * 앱과 그 앱이 참조하는 모델을 함께 묶은, 실행에 필요한 모든 것.
+ * direct 모드는 모델을 쓰지 않으므로 model 이 없다.
+ */
 export interface ResolvedApp {
   app: AppDefinition;
-  model: ModelDefinition;
+  model: ModelDefinition | null;
 }
 
 /**
@@ -26,7 +29,8 @@ export interface PublicAppDefinition {
   fields: FieldDefinition[];
   requireOneOf: string[];
   responseFormat: ResponseFormat;
-  hasTools: boolean;
+  /** query 면 답변 문장 없이 결과를 표로 그린다. */
+  mode: 'model' | 'query';
   /** VPC 내부 자원을 쓰는 앱. 프론트가 VPN 상태로 실행을 막는다. */
   requiresVpn: boolean;
 }
@@ -40,8 +44,8 @@ export function toPublic({ app, model }: ResolvedApp): PublicAppDefinition {
     group: app.group,
     fields: app.fields,
     requireOneOf: app.requireOneOf,
-    responseFormat: model.responseFormat,
-    hasTools: app.mcpServers.length > 0,
+    responseFormat: model?.responseFormat ?? { type: 'text' },
+    mode: app.mode,
     requiresVpn: app.requiresVpn,
   };
 }

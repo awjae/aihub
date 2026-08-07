@@ -9,12 +9,19 @@ export interface AppConfig {
   port: number;
   corsOrigin: string;
   appsConfigPath: string;
-  mcpConfigPath: string;
-  maxToolIterations: number;
-  mcpToolTimeoutMs: number;
-  maxToolResultChars: number;
+  /** 질문을 SQL 로 바꾸는 CLI 의 진입 파일 (akita_schema). 질의마다 새로 띄운다. */
+  queryCliEntry?: string;
+  database: DatabaseConfig;
+  maxRows: number;
   openai: { apiKey?: string; baseURL?: string };
   vpn: VpnConfig;
+}
+
+export interface DatabaseConfig {
+  url?: string;
+  statementTimeoutMs: number;
+  /** VPN 이 내려가면 커넥션이 매달린다. 빨리 실패시켜 사용자를 기다리게 하지 않는다. */
+  connectionTimeoutMs: number;
 }
 
 /**
@@ -32,14 +39,17 @@ export function loadConfiguration(): AppConfig {
     port: int(process.env.PORT, 3000),
     corsOrigin: process.env.CORS_ORIGIN ?? '*',
     appsConfigPath: resolve(process.env.APPS_CONFIG_PATH ?? './config/apps.json'),
-    mcpConfigPath: resolve(process.env.MCP_CONFIG_PATH ?? './config/mcp.json'),
-    maxToolIterations: int(process.env.MAX_TOOL_ITERATIONS, 8),
-    mcpToolTimeoutMs: int(process.env.MCP_TOOL_TIMEOUT_MS, 60_000),
-    maxToolResultChars: int(process.env.MAX_TOOL_RESULT_CHARS, 20_000),
     openai: {
       apiKey: process.env.OPENAI_API_KEY || undefined,
       baseURL: process.env.OPENAI_BASE_URL || undefined,
     },
+    queryCliEntry: process.env.AKITA_QUERY_CLI || undefined,
+    database: {
+      url: process.env.DATABASE_URL || undefined,
+      statementTimeoutMs: int(process.env.DATABASE_QUERY_TIMEOUT_MS, 15_000),
+      connectionTimeoutMs: int(process.env.DATABASE_CONNECT_TIMEOUT_MS, 5_000),
+    },
+    maxRows: int(process.env.MAX_ROWS, 50),
     vpn: {
       ovpnConfig: process.env.VPN_OVPN_CONFIG || undefined,
       probeTarget: process.env.VPN_PROBE_TARGET || undefined,

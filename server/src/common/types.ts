@@ -47,15 +47,15 @@ export interface ChatRequest {
 /** 어댑터가 한 턴 동안 흘려보내는 이벤트 */
 export type ProviderEvent =
   | { type: 'text'; text: string }
-  | { type: 'reasoning'; text: string }
   | { type: 'turn_end'; assistant: { content: string; toolCalls: ToolCall[] } };
 
 /** 클라이언트로 나가는 SSE 이벤트 */
 export type StreamEvent =
   | { type: 'start'; appId: string }
   | { type: 'text'; text: string }
-  | { type: 'reasoning'; text: string }
-  | { type: 'tool_call'; id: string; name: string; input: unknown }
-  | { type: 'tool_result'; id: string; name: string; ok: boolean; preview: string; ms: number }
-  | { type: 'done'; usage?: { iterations: number } }
+  /** 진행 단계 알림. 조회처럼 여러 초 걸리는 작업에서 화면이 멈춘 게 아님을 알린다. */
+  | { type: 'step'; name: string; message: string }
+  /** direct 모드 결과. 모델을 거치지 않은 구조체가 그대로 화면으로 간다. */
+  | { type: 'data'; data: unknown }
+  | { type: 'done'; usage?: { ms: number } }
   | { type: 'error'; message: string };

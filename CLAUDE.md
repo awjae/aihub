@@ -8,7 +8,7 @@ An internal AI gateway. Non-developers pick a form, submit it, and get a streame
 
 **There is no authentication by design** — this is meant to run behind a VPN / internal network only. Don't add auth-adjacent features assuming one exists.
 
-`VpnModule` is the one part that touches the network rather than models: an app marked `requiresVpn` reads something inside a VPC, so a Client VPN tunnel has to be up before it can. It stays **off unless `VPN_OVPN_CONFIG` points at a real file**, and the frontend renders nothing when the server reports `configured: false` — deployed inside the VPC, none of it applies.
+`VpnModule` is the one part that touches the network rather than models: the production RDS sits inside a VPC, so a Client VPN tunnel has to be up before `clinic-data-qa` can read anything. It stays **off unless `VPN_OVPN_CONFIG` points at a real file**, and the frontend renders nothing when the server reports `configured: false` — deployed inside the VPC, none of it applies.
 
 Two boundaries are deliberate and easy to erode:
 
@@ -45,18 +45,33 @@ curl -X POST localhost:3000/api/apps/reload   # re-read config without restart
 
 `config/apps.json` has two top-level sections, and which section a setting belongs in is not arbitrary:
 
-- **`models`** own the *contract*: `provider`, `model`, `baseURL`, `apiKeyEnv`, `systemPrompt`, `userTemplate`, `responseFormat`. For a fine-tuned model these are fixed by its **training data** — the prompt shape it was trained on and the output shape it emits.
-- **`apps`** own the *UI*: `name`, `icon`, `fields`, `requireOneOf`, `mcpServers`, plus a `model` name reference.
+- **`models`** own the *contract*: `provider`, `model`, `baseURL`, `apiKeyEnv`, `systemPrompt`, `userTemplate`, `responseFormat`. For a fine-tuned model these are fixed by its **training data** — the prompt shape it was trained on and the output shape it emits. Only `query` apps skip this; they have no model.
+- **`apps`** own the *UI*: `name`, `icon`, `fields`, `requireOneOf`, `requiresVpn`, plus a `model` name reference (or, for `query` apps, a `questionTemplate`).
 
 Multiple apps can share one model without duplicating the prompt contract. If someone wants "same model, different prompt", the answer is a second `models` entry — not an app-level override. There is deliberately no override mechanism.
 
 `AppsService.load()` resolves each app against its model into a `ResolvedApp { app, model }`; everything downstream takes that pair.
 
-### Request flow
+### Two execution paths, and why
 
-`ChatController` (SSE) → `ChatService.run()` → provider session ↔ `McpService`.
+`RunController` (`POST /api/run/:appId`, SSE) routes on `app.mode`. That one ternary is the only place they diverge.
 
-`ChatService` owns the tool loop: run a turn, collect `tool_use`, execute via MCP in parallel, feed results back, repeat until no tool calls or `MAX_TOOL_ITERATIONS`. Providers only know how to run **one turn**.
+- **`model`** → `ChatService` → one provider turn → streamed text. `diagnosis-predictor`.
+- **`query`** → `DirectService` → `QueryBuilderService` (child process) → `SqlExecutorService` (pooled pg) → a table. **No model sees the result.** `clinic-data-qa`.
+
+`query` exists because a model in the answer path is a data-egress path: rows would reach the LLM provider purely to have prose written about them. Here the only LLM call turns the *question* into SQL, inside a child process that never touches the database. Execution and rendering end on our side.
+
+The trade is deliberate: **`query` produces no answer sentence.** The frontend shows the value, the table, and the SQL. Don't "improve" it by piping the result through a model afterwards; that reinstates exactly what it exists to prevent.
+
+### Why a child process, and why it only builds SQL
+
+`akita_schema` ships a CLI that turns a question into SQL. The gateway spawns it per query (`AKITA_QUERY_CLI`), reads one line of JSON, and executes the SQL itself.
+
+- **Per query, not resident.** Building is CPU-only — catalog load is ~14ms, ~100ms including process start, against an LLM round trip measured in seconds. A crash there cannot take the gateway with it.
+- **The builder never opens a database connection.** If it did, every query would pay a fresh TLS handshake to RDS over the VPN. The pool lives in `SqlExecutorService` and is reused.
+- **The read-only guard is duplicated on purpose.** `server/src/query/read-only-guard.ts` is a verbatim copy of akita_schema's; the pool also sets `default_transaction_read_only=on`. Two layers, because "the generator only emits SELECT" assumes the generator has no bugs.
+
+This replaced an MCP integration. MCP earns its keep when a *model* discovers and chooses tools; nothing here does that, so it was 237 lines of `McpService`, an SDK on both sides, and JSON-RPC to make one fixed call. If a model-picks-tools app ever appears, bring it back for that — don't reach for it as IPC.
 
 ### Provider sessions keep vendor-native history — do not "simplify" this
 
@@ -90,7 +105,7 @@ Output format varies per model, so parsing rules live in `responseFormat` rather
 - **Boot**: invalid config crashes the process (fail fast; Docker restart-loops).
 - **Reload**: returns 400 with the zod path/message and **keeps the previously loaded definitions**, so a bad edit can't take down a running service.
 - **Mid-request**: SSE headers are already sent, so failures arrive as `{"type":"error"}` stream events, not HTTP status codes. The frontend must read them from the stream.
-- **MCP tool failure**: returned to the model as an error-flagged tool result, never thrown — the model gets to recover.
+- **Query failure**: the builder's `unsupported_query` is the only failure the user can act on, so it is surfaced as "이 질문은 지금 데이터로 답할 수 없습니다" plus the reason. Connection errors are rewritten to point at the VPN, which is what they almost always mean.
 
 ## Landmines
 
@@ -105,6 +120,6 @@ These were real bugs; the fix is easy to undo by accident.
 ## Conventions
 
 - Code comments and all user-facing strings (errors, UI, config comments) are in **Korean**.
-- Server tsconfig uses `module: node16` — required for the MCP SDK's `exports`-only subpaths.
-- MCP tools are namespaced `<server>__<tool>` to avoid collisions across servers.
+- Server tsconfig uses `module: node16`. It was adopted for the MCP SDK's `exports`-only subpaths; that dependency is gone, so the setting is now inertia rather than a requirement — leave it unless something needs otherwise.
+- `clinic-data-qa` depends on **another repository**, `akita_schema`, for the question→SQL builder. It is **not vendored**: the Dockerfile pulls it in through a named build context (`additional_contexts: akita: ../akita_schema`) so the deployment stays one container, and the gateway spawns its CLI per query at `AKITA_QUERY_CLI`. That repository's contract is deliberately plain — `WORKSPACE_ID`, `OPENAI_API_KEY`, `LLM_MODEL`, and nothing about how Akita stores secrets. Two consequences: `docker compose build` needs the sibling checkout, and a missing value or a downed VPN costs that one app while everything else keeps working.
 - `config/` is bind-mounted read-only in `docker-compose.yml`, so config edits + `/api/apps/reload` need no rebuild.
