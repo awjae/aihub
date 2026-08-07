@@ -27,6 +27,18 @@ cp .env.example .env      # API 키 채우기
 docker compose up --build # → http://localhost:3000
 ```
 
+배포용 이미지 말기 (로컬에서 빌드 → ECR):
+
+```bash
+npm run image:build      # PLATFORM=linux/amd64 기본 — AWS 가 x86_64 라서
+npm run image:verify     # 볼륨 없이 띄워 health + 질의 생성기까지 확인
+REGISTRY=<계정>.dkr.ecr.ap-northeast-2.amazonaws.com npm run image:release
+```
+
+- `akita_schema` 가 형제 디렉터리에 있어야 합니다 (`AKITA_CONTEXT` 로 변경 가능). 없으면 도커의 모호한 메시지 대신 그 사실을 먼저 알려줍니다.
+- Graviton 인스턴스면 `PLATFORM=linux/arm64`.
+- 태그는 기본이 `YYYYMMDD-HHMM` 이며 `TAG` 로 지정할 수 있습니다.
+
 로컬 개발(핫 리로드):
 
 ```bash

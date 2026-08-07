@@ -1,0 +1,13 @@
+{
+  "name": "aihub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "사내 AI 게이트웨이 — 이미지 빌드·배포 스크립트 모음 (실제 코드는 server/ 와 web/)",
+  "scripts": {
+    "image:build": "./scripts/build-image.sh build",
+    "image:verify": "./scripts/build-image.sh verify",
+    "image:push": "./scripts/build-image.sh push",
+    "image:release": "./scripts/build-image.sh release",
+    "typecheck": "npm --prefix server run typecheck && npm --prefix web run typecheck"
+  }
+}
