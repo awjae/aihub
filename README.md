@@ -110,8 +110,6 @@ cd web && npm install && npm run dev               # :5173
 > **에디터에 빨간 줄이 뜬다면** — 에디터가 `.json` 을 순수 JSON 으로 검사해서입니다. `.vscode/settings.json` 이 `config/*.json` 을 `jsonc` 로 매핑해두었으니 VS Code 는 그대로 열면 됩니다.
 >
 > **여러 줄 문자열은 배열로.** `systemPrompt`, `userTemplate`, 필드의 `default` 는 문자열 배열을 주면 줄바꿈으로 이어집니다.
->
-> **YAML 도 계속 지원합니다.** `APPS_CONFIG_PATH` 가 `.yaml` / `.yml` 로 끝나면 YAML 로 읽습니다.
 
 ### 응답 표시 (`responseFormat`) — 모델 소유
 
