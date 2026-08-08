@@ -43,7 +43,8 @@ export interface AppSummary {
   /** 이 중 최소 하나는 입력되어야 실행 가능 */
   requireOneOf: string[];
   responseFormat: ResponseFormat;
-  hasTools: boolean;
+  /** query 면 답변 문장 없이 결과를 표로 그린다. */
+  mode: 'model' | 'query';
   /** VPC 내부 자원을 씀 — 연결 전에는 실행이 잠긴다. */
   requiresVpn: boolean;
 }
@@ -51,19 +52,15 @@ export interface AppSummary {
 export type StreamEvent =
   | { type: 'start'; appId: string }
   | { type: 'text'; text: string }
-  | { type: 'reasoning'; text: string }
-  | { type: 'tool_call'; id: string; name: string; input: unknown }
-  | { type: 'tool_result'; id: string; name: string; ok: boolean; preview: string; ms: number }
-  | { type: 'done'; usage?: { iterations: number } }
+  | { type: 'step'; name: string; message: string }
+  | { type: 'data'; data: unknown }
+  | { type: 'done'; usage?: { ms: number } }
   | { type: 'error'; message: string };
 
-export interface ToolLogEntry {
-  id: string;
+/** 진행 단계 표시용. 조회처럼 여러 초 걸리는 작업에서 멈춘 게 아님을 보여준다. */
+export interface StepEntry {
   name: string;
-  input: unknown;
-  status: 'running' | 'ok' | 'error';
-  preview?: string;
-  ms?: number;
+  message: string;
 }
 
 /** 서버의 VpnStatus 와 같은 모양 (server/src/vpn/vpn.types.ts) */
@@ -73,3 +70,23 @@ export interface VpnStatus {
   tunnel: 'down' | 'starting' | 'up';
   dbReachable: boolean | null;
 }
+
+/** direct 모드 툴이 돌려주는 구조체 (akita_schema 의 toStructuredAnswer). */
+export type DirectQueryResult =
+  | {
+      executed: true;
+      question: string;
+      sql: string;
+      parameters: unknown[];
+      columns: string[];
+      rows: Record<string, unknown>[];
+      rowCount: number;
+      truncated: boolean;
+    }
+  | {
+      executed: false;
+      question: string;
+      sql: string;
+      parameters: unknown[];
+      reason?: string;
+    };

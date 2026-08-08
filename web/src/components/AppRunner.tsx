@@ -7,7 +7,7 @@ import { runApp } from '../lib/api';
 import { formatRecords, parseRecords } from '../lib/parseRecords';
 import { validate } from '../lib/validate';
 import { canReachPrivateNetwork, describeBlockedReason, useVpnStatus } from '../lib/useVpnStatus';
-import type { AppSummary, ToolLogEntry } from '../lib/types';
+import type { AppSummary, DirectQueryResult, StepEntry } from '../lib/types';
 
 interface Props {
   app: AppSummary;
@@ -28,8 +28,8 @@ export default function AppRunner({ app }: Props) {
   const [values, setValues] = useState<Record<string, unknown>>(() => initialValues(app));
   const [status, setStatus] = useState<Status>('idle');
   const [text, setText] = useState('');
-  const [reasoning, setReasoning] = useState('');
-  const [tools, setTools] = useState<ToolLogEntry[]>([]);
+  const [steps, setSteps] = useState<StepEntry[]>([]);
+  const [data, setData] = useState<DirectQueryResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -63,8 +63,7 @@ export default function AppRunner({ app }: Props) {
     setValues(initialValues(app));
     setStatus('idle');
     setText('');
-    setReasoning('');
-    setTools([]);
+    setSteps([]);
     setError(null);
   }, [app]);
 
@@ -88,8 +87,8 @@ export default function AppRunner({ app }: Props) {
 
     setStatus('running');
     setText('');
-    setReasoning('');
-    setTools([]);
+    setSteps([]);
+    setData(null);
     setError(null);
     setCopied(false);
 
@@ -99,31 +98,13 @@ export default function AppRunner({ app }: Props) {
           case 'text':
             setText((prev) => prev + event.text);
             break;
-
-          case 'reasoning':
-            setReasoning((prev) => prev + event.text);
+          // direct 모드 — 모델을 거치지 않은 조회 결과가 그대로 온다.
+          case 'step':
+            setSteps((prev) => [...prev, { name: event.name, message: event.message }]);
             break;
 
-          case 'tool_call':
-            setTools((prev) => [
-              ...prev,
-              { id: event.id, name: event.name, input: event.input, status: 'running' },
-            ]);
-            break;
-
-          case 'tool_result':
-            setTools((prev) =>
-              prev.map((entry) =>
-                entry.id === event.id
-                  ? {
-                      ...entry,
-                      status: event.ok ? 'ok' : 'error',
-                      preview: event.preview,
-                      ms: event.ms,
-                    }
-                  : entry,
-              ),
-            );
+          case 'data':
+            setData(event.data as DirectQueryResult);
             break;
 
           case 'error':
@@ -178,7 +159,7 @@ export default function AppRunner({ app }: Props) {
             {app.name}
           </h1>
           {app.description && <p className="panel-desc">{app.description}</p>}
-          {app.hasTools && <span className="tag">사내 도구 연동</span>}
+          {app.requiresVpn && <span className="tag">원내 DB 조회</span>}
         </header>
 
         {app.requiresVpn && <VpnPanel status={vpnStatus} onStatus={setVpnStatus} />}
@@ -207,11 +188,11 @@ export default function AppRunner({ app }: Props) {
       </section>
 
       <ResponsePanel
+        data={data}
         text={text}
         records={records}
         recordsFormat={recordsFormat}
-        reasoning={reasoning}
-        tools={tools}
+        steps={steps}
         status={status}
         error={error}
         onCopy={handleCopy}

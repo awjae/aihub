@@ -1,17 +1,18 @@
 import { useEffect, useRef } from 'react';
 
+import { DataResult } from './DataResult';
 import RecordList from './RecordList';
-import ToolLog from './ToolLog';
 import type { ParsedRecord } from '../lib/parseRecords';
-import type { RecordsFormat, ToolLogEntry } from '../lib/types';
+import type { DirectQueryResult, RecordsFormat, StepEntry } from '../lib/types';
 
 interface Props {
+  /** direct 모드 결과. 있으면 문장 대신 이걸 그린다. */
+  data: DirectQueryResult | null;
   text: string;
   /** responseFormat 파싱 결과. null 이면 원문(text)을 그대로 보여준다. */
   records: ParsedRecord[] | null;
   recordsFormat: RecordsFormat | null;
-  reasoning: string;
-  tools: ToolLogEntry[];
+  steps: StepEntry[];
   status: 'idle' | 'running' | 'done' | 'error';
   error: string | null;
   onCopy: () => void;
@@ -19,11 +20,11 @@ interface Props {
 }
 
 export default function ResponsePanel({
+  data,
   text,
   records,
   recordsFormat,
-  reasoning,
-  tools,
+  steps,
   status,
   error,
   onCopy,
@@ -36,9 +37,9 @@ export default function ResponsePanel({
   useEffect(() => {
     const el = bodyRef.current;
     if (el && pinnedToBottom.current) el.scrollTop = el.scrollHeight;
-  }, [text, reasoning]);
+  }, [text, data]);
 
-  const empty = status === 'idle' && !text && tools.length === 0;
+  const empty = status === 'idle' && !text && !data && steps.length === 0;
 
   return (
     <section className="response">
@@ -65,16 +66,18 @@ export default function ResponsePanel({
       >
         {empty && <p className="placeholder">왼쪽 폼을 채우고 실행하면 여기에 결과가 표시됩니다.</p>}
 
-        <ToolLog entries={tools} />
-
-        {reasoning && !text && (
-          <div className="reasoning">
-            <span className="reasoning-label">생각 중</span>
-            <p>{reasoning.slice(-400)}</p>
-          </div>
+        {/* 조회는 여러 초 걸린다. 어디까지 왔는지 보여줘야 멈춘 게 아님을 안다. */}
+        {steps.length > 0 && !data && (
+          <ol className="steps">
+            {steps.map((step) => (
+              <li key={step.name}>{step.message}</li>
+            ))}
+          </ol>
         )}
 
-        {records && recordsFormat ? (
+        {data ? (
+          <DataResult result={data} />
+        ) : records && recordsFormat ? (
           <RecordList records={records} format={recordsFormat} streaming={status === 'running'} />
         ) : (
           text && <div className="response-text">{text}</div>

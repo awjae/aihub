@@ -38,16 +38,22 @@ export class AppsService implements OnModuleInit {
 
       if (next.has(app.id)) throw new Error(`${at}: 앱 id 가 중복됩니다.`);
 
-      const modelDef = models[app.model];
-      if (!modelDef) {
-        const available = Object.keys(models).join(', ') || '(없음)';
-        throw new Error(
-          `${at}.model: '${app.model}' 모델이 models 에 없습니다. 사용 가능: ${available}`,
-        );
+      // query 모드는 모델을 거치지 않는다 — 조회 결과가 그대로 화면으로 간다.
+      let model: ModelDefinition | null = null;
+      if (app.mode === 'model') {
+        const modelDef = models[app.model as string];
+        if (!modelDef) {
+          const available = Object.keys(models).join(', ') || '(없음)';
+          throw new Error(
+            `${at}.model: '${app.model}' 모델이 models 에 없습니다. 사용 가능: ${available}`,
+          );
+        }
+        model = { ...modelDef, id: app.model as string };
+        this.checkTemplateKeys(app, model.userTemplate, `모델 '${model.id}' 의 userTemplate`, at);
+      } else {
+        this.checkTemplateKeys(app, app.questionTemplate as string, 'questionTemplate', at);
       }
 
-      const model: ModelDefinition = { ...modelDef, id: app.model };
-      this.checkTemplateKeys(app, model, at);
       this.checkRequireOneOf(app, at);
 
       next.set(app.id, { app, model });
@@ -75,6 +81,26 @@ export class AppsService implements OnModuleInit {
    * 정의되지 않은 키는 무시하므로 프론트가 임의 값을 넣어도 프롬프트에 섞이지 않는다.
    */
   renderPrompt({ app, model }: ResolvedApp, input: Record<string, unknown>): string {
+    if (!model) throw new Error(`앱 '${app.id}' 는 모델이 없습니다 (direct 모드).`);
+    return this.renderWithTemplate(app, model.userTemplate, input);
+  }
+
+  /** direct 모드: 폼 입력값을 질의 생성기에 넘길 질문 한 줄로 렌더링한다. */
+  renderQuestion(
+    { app }: ResolvedApp,
+    input: Record<string, unknown>,
+  ): string {
+    if (!app.questionTemplate) {
+      throw new Error(`앱 '${app.id}' 에 questionTemplate 이 없습니다.`);
+    }
+    return this.renderWithTemplate(app, app.questionTemplate, input);
+  }
+
+  private renderWithTemplate(
+    app: AppDefinition,
+    template: string,
+    input: Record<string, unknown>,
+  ): string {
     const values = new Map<string, string>();
     const filled = new Set<string>();
 
@@ -107,7 +133,7 @@ export class AppsService implements OnModuleInit {
       throw new BadRequestException(`${labels.join(', ')} 중 최소 하나는 입력해야 합니다.`);
     }
 
-    return this.renderTemplate(model.userTemplate, values);
+    return this.renderTemplate(template, values);
   }
 
   /**
@@ -176,18 +202,24 @@ export class AppsService implements OnModuleInit {
 
   // ── 앱↔모델 교차 검증 (zod 스키마 하나로는 볼 수 없는 것들) ────
 
-  /** 모델이 요구하는 {{key}} 를 앱이 전부 제공하는지. 어긋나면 프롬프트에 빈칸이 남는다. */
-  private checkTemplateKeys(app: AppDefinition, model: ModelDefinition, at: string): void {
+  /** 템플릿이 요구하는 {{key}} 를 앱이 전부 제공하는지. 어긋나면 빈칸이 남는다. */
+  private checkTemplateKeys(
+    app: AppDefinition,
+    template: string,
+    label: string,
+    at: string,
+  ): void {
     const provided = new Set(app.fields.map((field) => field.key));
     const duplicates = app.fields.length - provided.size;
     if (duplicates > 0) throw new Error(`${at}.fields: key 가 중복됩니다.`);
 
-    const required = new Set(this.templateKeys(model.userTemplate));
-    const missing = [...required].filter((key) => !provided.has(key));
+    const missing = [...new Set(this.templateKeys(template))].filter(
+      (key) => !provided.has(key),
+    );
 
     if (missing.length > 0) {
       throw new Error(
-        `${at}: 모델 '${model.id}' 의 userTemplate 이 요구하는 ` +
+        `${at}: ${label} 이(가) 요구하는 ` +
           `${missing.map((k) => `{{${k}}}`).join(', ')} 에 대응하는 field 가 없습니다.`,
       );
     }
