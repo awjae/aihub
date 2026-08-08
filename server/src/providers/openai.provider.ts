@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import OpenAI, { AzureOpenAI } from 'openai';
+import OpenAI from 'openai';
 import type {
   ChatCompletionMessageFunctionToolCall,
   ChatCompletionMessageParam,
@@ -12,8 +12,8 @@ import { resolveApiKey } from './credentials';
 import { ChatProvider, ProviderSession, ToolResult } from './provider.interface';
 
 /**
- * OpenAI 및 OpenAI 호환 엔드포인트(사내 vLLM, LiteLLM 등)와 Azure OpenAI 를 담당한다.
- * Azure 는 모델 정의의 model 값에 "배포 이름(deployment name)"을 적는다.
+ * OpenAI 및 OpenAI 호환 엔드포인트(사내 vLLM, LiteLLM 등)를 담당한다.
+ * 다른 엔드포인트는 모델 정의의 baseURL·apiKeyEnv 로 지정한다.
  */
 @Injectable()
 export class OpenAiProvider implements ChatProvider {
@@ -21,7 +21,7 @@ export class OpenAiProvider implements ChatProvider {
   private readonly clients = new Map<string, OpenAI>();
 
   constructor(
-    readonly name: 'openai' | 'azure',
+    readonly name: 'openai',
     private readonly config: AppConfig,
   ) {}
 
@@ -30,19 +30,11 @@ export class OpenAiProvider implements ChatProvider {
     const cached = this.clients.get(cacheKey);
     if (cached) return cached;
 
-    let client: OpenAI;
-
-    if (this.name === 'azure') {
-      const apiKey = resolveApiKey(connection.apiKeyEnv, this.config.azure.apiKey, 'AZURE_OPENAI_API_KEY');
-      const endpoint = connection.baseURL ?? this.config.azure.endpoint;
-      if (!endpoint) {
-        throw new Error('AZURE_OPENAI_ENDPOINT 가 설정되지 않았습니다. (또는 모델에 baseURL 지정)');
-      }
-      client = new AzureOpenAI({ apiKey, endpoint, apiVersion: this.config.azure.apiVersion });
-    } else {
-      const apiKey = resolveApiKey(connection.apiKeyEnv, this.config.openai.apiKey, 'OPENAI_API_KEY');
-      client = new OpenAI({ apiKey, baseURL: connection.baseURL ?? this.config.openai.baseURL });
-    }
+    const apiKey = resolveApiKey(connection.apiKeyEnv, this.config.openai.apiKey, 'OPENAI_API_KEY');
+    const client = new OpenAI({
+      apiKey,
+      baseURL: connection.baseURL ?? this.config.openai.baseURL,
+    });
 
     this.clients.set(cacheKey, client);
     return client;

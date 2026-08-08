@@ -51,7 +51,9 @@ Multiple apps can share one model without duplicating the prompt contract. If so
 
 ### Provider sessions keep vendor-native history — do not "simplify" this
 
-`ProviderSession` (`providers/provider.interface.ts`) holds the conversation in each vendor's own format. This looks like duplication but is load-bearing: Anthropic requires `thinking` blocks to be echoed back **unmodified** across tool-loop turns, and round-tripping through a neutral message type silently drops them, breaking signature validation. Adding a provider means implementing `runTurn()` + `addToolResults()` against that vendor's SDK, not extending a shared message mapper.
+`ProviderSession` (`providers/provider.interface.ts`) holds the conversation in each vendor's own format. There is only one provider today (OpenAI), so the seam looks redundant — it is not. Vendors require their own opaque blocks (reasoning, signatures) to be echoed back **unmodified** across tool-loop turns, and round-tripping through a neutral message type silently drops them. Adding a provider means implementing `runTurn()` + `addToolResults()` against that vendor's SDK, not extending a shared message mapper.
+
+An Anthropic adapter and an Azure variant existed and were removed once nothing used them; re-add by the same rule rather than by generalizing the OpenAI one.
 
 Clients are cached per `(baseURL, apiKeyEnv)` so different models can use different endpoints and credentials. `apiKeyEnv` is the **name** of an env var, resolved in `providers/credentials.ts` — config files never contain secrets.
 

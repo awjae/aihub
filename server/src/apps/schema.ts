@@ -53,9 +53,9 @@ const responseFormat = z
 export const modelSchema = z
   .strictObject({
     provider: z
-      .enum(['anthropic', 'openai', 'azure'])
-      .describe('openai 는 사내 vLLM 등 OpenAI 호환 엔드포인트도 포함합니다.'),
-    model: z.string().min(1).describe('모델 ID. Azure 는 배포 이름(deployment name).'),
+      .enum(['openai'])
+      .describe('사내 vLLM 등 OpenAI 호환 엔드포인트도 포함합니다 (baseURL 로 지정).'),
+    model: z.string().min(1).describe('모델 ID.'),
     baseURL: z
       .string()
       .url()
@@ -68,8 +68,6 @@ export const modelSchema = z
       .describe('이 모델에 쓸 API 키가 담긴 환경변수 이름. 값이 아니라 "이름"입니다.'),
 
     maxTokens: z.int().min(1).default(4096),
-    thinking: z.enum(['adaptive', 'disabled']).optional().describe('Anthropic 전용'),
-    effort: z.enum(['low', 'medium', 'high', 'xhigh', 'max']).optional().describe('Anthropic 전용'),
 
     systemPrompt: multiline.optional().describe('학습 데이터의 system 메시지와 일치시키세요.'),
     userTemplate: multiline.describe(

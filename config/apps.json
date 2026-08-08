@@ -69,15 +69,6 @@
     //   "model": "llama-3-70b-vet",
     //   "userTemplate": ["{{question}}"]
     // },
-    //
-    // "claude": {                           // Anthropic
-    //   "provider": "anthropic",
-    //   "model": "claude-sonnet-5",
-    //   "thinking": "disabled",             // adaptive(기본) | disabled
-    //   "effort": "low",                    // low | medium | high | xhigh | max
-    //   "systemPrompt": ["너는 ... 이다."],
-    //   "userTemplate": ["{{question}}"]
-    // }
   },
 
   "apps": [

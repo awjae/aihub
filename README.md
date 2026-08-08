@@ -8,7 +8,7 @@
 NestJS 게이트웨이
    ├─ apps.json 에서 모델·앱 정의 로드 → 프롬프트 렌더링
    ├─ MCP 서버들에서 tool 목록 수집
-   ├─ 모델 호출 (Anthropic / OpenAI / Azure OpenAI)
+   ├─ 모델 호출 (OpenAI 및 OpenAI 호환 엔드포인트)
    ├─ tool_use → MCP 실행 → 결과 반환 → 모델 재호출  (반복)
    ↓
 [화면] 응답 영역에 실시간 출력 + 도구 실행 로그(접기)
@@ -56,8 +56,8 @@ cd web && npm install && npm run dev               # :5173
 {
   "models": {
     "vet-diagnosis": {
-      "provider": "openai",                 // anthropic | openai | azure
-      "model": "ft:gpt-4o-mini:acme::abc",  // Azure 는 "배포 이름"
+      "provider": "openai",                 // OpenAI 호환 엔드포인트 포함
+      "model": "ft:gpt-4o-mini:acme::abc",
       "maxTokens": 2000,
       "systemPrompt": "너는 ... 이다.",
       "userTemplate": ["Subjective) {{subjective}}", "Objective) {{objective}}"],
@@ -177,15 +177,6 @@ cd web && npm install && npm run dev               # :5173
 
 여러 항목을 **한 줄에** 배치하면(`{{a}} / {{b}}`) 줄 단위 생략이 동작하지 않으니, 선택 입력은 각자 다른 줄에 두세요.
 
-**Anthropic 전용 옵션**
-
-| 키         | 값                                    | 설명                                                  |
-| ---------- | ------------------------------------- | ----------------------------------------------------- |
-| `thinking` | `adaptive`(기본) \| `disabled`        | `adaptive` 면 "생각 중" 진행 상황이 화면에 표시됩니다 |
-| `effort`   | `low`/`medium`/`high`/`xhigh`/`max`   | 추론 깊이·토큰 사용량. 단순 작업은 `low`가 충분합니다 |
-
-> `thinking: disabled` 는 effort `high` 이하에서만 허용됩니다. `xhigh`/`max` 와 함께 쓰면 서버가 자동으로 무시하고 모델 기본값을 씁니다.
-
 ### 반영
 
 ```bash
@@ -271,7 +262,7 @@ data: {"type":"done","usage":{"iterations":2}}
 data: {"type":"error","message":"..."}
 ```
 
-`reasoning` 이벤트는 Anthropic 의 thinking 요약입니다. POST 로 SSE 를 내려주므로 프론트는 `EventSource` 대신 `fetch` + `ReadableStream` 으로 읽습니다.
+`reasoning` 이벤트는 모델이 추론 요약을 흘려줄 때만 옵니다. POST 로 SSE 를 내려주므로 프론트는 `EventSource` 대신 `fetch` + `ReadableStream` 으로 읽습니다.
 
 ---
 
@@ -281,9 +272,7 @@ data: {"type":"error","message":"..."}
 
 | 변수                                                              | 설명                                             |
 | ----------------------------------------------------------------- | ------------------------------------------------ |
-| `ANTHROPIC_API_KEY`                                               | Claude 사용 시                                   |
 | `OPENAI_API_KEY` / `OPENAI_BASE_URL`                              | OpenAI, 또는 사내 vLLM·LiteLLM 등 호환 엔드포인트 |
-| `AZURE_OPENAI_API_KEY` / `_ENDPOINT` / `_API_VERSION`             | Azure 배포 모델                                  |
 | `MAX_TOOL_ITERATIONS`                                             | 툴 루프 상한 (기본 8) — 무한 루프 방지           |
 | `MCP_TOOL_TIMEOUT_MS`                                             | 툴 1회 타임아웃 (기본 60s)                       |
 | `MAX_TOOL_RESULT_CHARS`                                           | 툴 결과 절삭 길이 (기본 20,000자)                |
@@ -314,7 +303,7 @@ config/
   mcp.json            MCP 서버 정의
 server/src/
   apps/               schema.ts(zod, 단일 출처) · 로드/검증 · 프롬프트 렌더링
-  providers/          Anthropic / OpenAI / Azure 어댑터 (벤더별 히스토리 보존)
+  providers/          OpenAI 호환 어댑터 (벤더별 히스토리 보존)
   mcp/                MCP 커넥션 풀, 툴 목록 수집, 툴 실행
   chat/               툴 루프 오케스트레이션 + SSE 컨트롤러
   common/             중립 메시지·이벤트 타입, 헬스체크
@@ -323,4 +312,4 @@ web/src/
   lib/                API 클라이언트(SSE 파서), 타입
 ```
 
-프로바이더 어댑터는 **각자 벤더 네이티브 포맷으로 히스토리를 보관**합니다. 중립 포맷으로 매 턴 왕복시키면 Anthropic 의 thinking 블록처럼 다음 턴에 그대로 돌려줘야 하는 정보가 유실되기 때문입니다.
+프로바이더 어댑터는 **각자 벤더 네이티브 포맷으로 히스토리를 보관**합니다. 중립 포맷으로 매 턴 왕복시키면 벤더 고유 블록(추론·서명 등)처럼 다음 턴에 그대로 돌려줘야 하는 정보가 유실되기 때문입니다. 지금은 어댑터가 하나뿐이지만, 벤더를 추가할 때는 이 규칙대로 새 어댑터를 만드세요.

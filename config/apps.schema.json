@@ -20,16 +20,14 @@
           "provider": {
             "type": "string",
             "enum": [
-              "anthropic",
-              "openai",
-              "azure"
+              "openai"
             ],
-            "description": "openai 는 사내 vLLM 등 OpenAI 호환 엔드포인트도 포함합니다."
+            "description": "사내 vLLM 등 OpenAI 호환 엔드포인트도 포함합니다 (baseURL 로 지정)."
           },
           "model": {
             "type": "string",
             "minLength": 1,
-            "description": "모델 ID. Azure 는 배포 이름(deployment name)."
+            "description": "모델 ID."
           },
           "baseURL": {
             "description": "이 모델만 다른 엔드포인트를 쓸 때. 생략하면 프로바이더 기본값.",
@@ -46,25 +44,6 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 9007199254740991
-          },
-          "thinking": {
-            "description": "Anthropic 전용",
-            "type": "string",
-            "enum": [
-              "adaptive",
-              "disabled"
-            ]
-          },
-          "effort": {
-            "description": "Anthropic 전용",
-            "type": "string",
-            "enum": [
-              "low",
-              "medium",
-              "high",
-              "xhigh",
-              "max"
-            ]
           },
           "systemPrompt": {
             "description": "학습 데이터의 system 메시지와 일치시키세요.",

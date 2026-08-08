@@ -10,7 +10,7 @@ export interface ToolResult {
  * 한 번의 대화(요청)를 담당하는 세션.
  *
  * 히스토리는 각 어댑터가 벤더 네이티브 포맷으로 들고 있는다.
- * 중립 포맷으로 왕복시키면 Anthropic 의 thinking 블록처럼
+ * 중립 포맷으로 왕복시키면 벤더 고유 블록(예: reasoning)처럼
  * 다음 턴에 그대로 돌려줘야 하는 정보가 유실되기 때문.
  */
 export interface ProviderSession {
