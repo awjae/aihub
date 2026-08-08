@@ -3,11 +3,19 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+
+      # 질의 생성기(질문 → SQL)의 소스는 별도 저장소에 있다.
+      # 이미지 안에 함께 굽되(컨테이너는 하나), 저장소는 합치지 않는다.
+      # git URL 이나 이미 빌드된 이미지도 쓸 수 있다:
+      #   akita: https://github.com/<org>/akita_schema.git#main
+      #   akita: docker-image://akita-query:1.0.0
+      additional_contexts:
+        akita: ../akita_schema
     image: aihub:latest
     container_name: aihub
     restart: unless-stopped
 
-    # PID 1 좀비 프로세스 방지 — stdio MCP 서버를 띄울 때 필요하다.
+    # PID 1 좀비 프로세스 방지 — 질의마다 자식 프로세스를 띄우므로 필요하다.
     init: true
 
     ports:
@@ -19,9 +27,8 @@ services:
     environment:
       PORT: 3000
       APPS_CONFIG_PATH: /app/config/apps.json
-      MCP_CONFIG_PATH: /app/config/mcp.json
 
-    # 앱/MCP 정의는 이미지 재빌드 없이 바꿀 수 있도록 마운트한다.
+    # 앱 정의는 이미지 재빌드 없이 바꿀 수 있도록 마운트한다.
     # 수정 후 POST /api/apps/reload 로 반영.
     volumes:
       - ./config:/app/config:ro

@@ -125,7 +125,17 @@ export const appSchema = z
     icon: z.string().optional().describe('이모지 아이콘 (예: 🩺)'),
     group: z.string().optional().describe('사이드바 그룹명'),
 
-    model: z.string().min(1).describe('models 에 정의한 모델 이름'),
+    /**
+     * model — 폼 입력을 모델에 보내고 그 응답을 보여줍니다 (기본).
+     * query — 질문을 SQL 로 바꿔 조회하고 결과를 표로 보여줍니다. 조회 결과가
+     *         모델 프롬프트로 들어가지 않고, 답변 문장도 없습니다.
+     */
+    mode: z.enum(['model', 'query']).optional().default('model'),
+
+    model: z.string().min(1).optional().describe('models 에 정의한 모델 이름 (model 모드 전용)'),
+    questionTemplate: multiline
+      .optional()
+      .describe('질의 생성기에 넘길 질문. {{key}} 에 폼 입력값이 들어갑니다. (query 모드 전용)'),
 
     fields: z.array(fieldSchema).min(1).describe('입력 폼 정의'),
     requireOneOf: z
@@ -133,16 +143,19 @@ export const appSchema = z
       .optional()
       .default([])
       .describe('나열한 필드 중 최소 하나는 입력되어야 실행됩니다.'),
-    mcpServers: z
-      .array(z.string())
-      .optional()
-      .default([])
-      .describe('mcp.json 에 정의한 서버 이름. 비우면 툴 없이 프롬프트만.'),
     requiresVpn: z
       .boolean()
       .optional()
       .default(false)
       .describe('VPC 내부 자원을 쓰는 앱. 연결되기 전에는 실행 버튼이 잠깁니다.'),
+  })
+  .refine((app) => app.mode !== 'model' || app.model !== undefined, {
+    error: "model 모드는 'model' 이 필요합니다.",
+    path: ['model'],
+  })
+  .refine((app) => app.mode !== 'query' || app.questionTemplate !== undefined, {
+    error: "query 모드는 'questionTemplate' 이 필요합니다.",
+    path: ['questionTemplate'],
   })
   .describe('앱(폼) 정의');
 
@@ -156,7 +169,6 @@ export const configSchema = z
   })
   .describe('AI Hub 설정 — 모델과 앱(폼)을 정의합니다.');
 
-export type ParsedConfig = z.output<typeof configSchema>;
 export type ParsedModel = z.output<typeof modelSchema>;
 export type ParsedApp = z.output<typeof appSchema>;
 

@@ -195,10 +195,34 @@
             "description": "사이드바 그룹명",
             "type": "string"
           },
-          "model": {
+          "mode": {
+            "default": "model",
             "type": "string",
-            "minLength": 1,
-            "description": "models 에 정의한 모델 이름"
+            "enum": [
+              "model",
+              "query"
+            ]
+          },
+          "model": {
+            "description": "models 에 정의한 모델 이름 (model 모드 전용)",
+            "type": "string",
+            "minLength": 1
+          },
+          "questionTemplate": {
+            "description": "질의 생성기에 넘길 질문. {{key}} 에 폼 입력값이 들어갑니다. (query 모드 전용)",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
           },
           "fields": {
             "minItems": 1,
@@ -309,14 +333,6 @@
               "type": "string"
             }
           },
-          "mcpServers": {
-            "default": [],
-            "description": "mcp.json 에 정의한 서버 이름. 비우면 툴 없이 프롬프트만.",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
           "requiresVpn": {
             "default": false,
             "description": "VPC 내부 자원을 쓰는 앱. 연결되기 전에는 실행 버튼이 잠깁니다.",
@@ -326,7 +342,6 @@
         "required": [
           "id",
           "name",
-          "model",
           "fields"
         ],
         "additionalProperties": false,
