@@ -27,6 +27,8 @@ export interface PublicAppDefinition {
   requireOneOf: string[];
   responseFormat: ResponseFormat;
   hasTools: boolean;
+  /** VPC 내부 자원을 쓰는 앱. 프론트가 VPN 상태로 실행을 막는다. */
+  requiresVpn: boolean;
 }
 
 export function toPublic({ app, model }: ResolvedApp): PublicAppDefinition {
@@ -40,5 +42,6 @@ export function toPublic({ app, model }: ResolvedApp): PublicAppDefinition {
     requireOneOf: app.requireOneOf,
     responseFormat: model.responseFormat,
     hasTools: app.mcpServers.length > 0,
+    requiresVpn: app.requiresVpn,
   };
 }

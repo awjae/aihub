@@ -8,6 +8,15 @@ An internal AI gateway. Non-developers pick a form, submit it, and get a streame
 
 **There is no authentication by design** — this is meant to run behind a VPN / internal network only. Don't add auth-adjacent features assuming one exists.
 
+`VpnModule` is the one part that touches the network rather than models: an app marked `requiresVpn` reads something inside a VPC, so a Client VPN tunnel has to be up before it can. It stays **off unless `VPN_OVPN_CONFIG` points at a real file**, and the frontend renders nothing when the server reports `configured: false` — deployed inside the VPC, none of it applies.
+
+Two boundaries are deliberate and easy to erode:
+
+- **It never turns the VPN on or off.** The subnet association is billed by connection-time, so a developer controls it from the akita repo (`client-vpn.sh production on/off`, EMR-56246). Putting a button here would move a billed, shared switch behind an unauthenticated page. The gateway only *follows*.
+- **It knows the state without AWS credentials.** Client VPN publishes the endpoint's DNS name only while a subnet is associated, so resolving the host taken from the `.ovpn` answers "can we connect right now?". Don't reintroduce the AWS SDK for this — it was tried and removed.
+
+The tunnel is raised on demand, not at boot: opening a `requiresVpn` app and pressing 다시 확인 both call `POST /api/vpn/recheck`. `GET /api/vpn/status` is for polling and must stay side-effect free.
+
 ## Commands
 
 ```bash
@@ -70,7 +79,7 @@ git add config/apps.schema.json
 
 Objects use `z.strictObject`, so unknown keys are rejected rather than ignored (a `defaultValue` typo previously failed silently). Cross-checks zod can't express — model reference exists, every `{{key}}` in `userTemplate` has a matching field, `requireOneOf` keys exist — live in `AppsService.load()`.
 
-Config is **JSONC**: comments and trailing commas allowed, parsed by `apps/jsonc.ts` (string-aware, so `https://` isn't treated as a comment). A `.yaml`/`.yml` extension in `APPS_CONFIG_PATH` switches to the YAML parser.
+Config is **JSONC**: comments and trailing commas allowed, parsed by `apps/jsonc.ts` (string-aware, so `https://` isn't treated as a comment). YAML support existed and was removed once nothing used it.
 
 ### Response rendering is config-driven
 

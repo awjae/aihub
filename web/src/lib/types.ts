@@ -44,6 +44,8 @@ export interface AppSummary {
   requireOneOf: string[];
   responseFormat: ResponseFormat;
   hasTools: boolean;
+  /** VPC 내부 자원을 씀 — 연결 전에는 실행이 잠긴다. */
+  requiresVpn: boolean;
 }
 
 export type StreamEvent =
@@ -62,4 +64,12 @@ export interface ToolLogEntry {
   status: 'running' | 'ok' | 'error';
   preview?: string;
   ms?: number;
+}
+
+/** 서버의 VpnStatus 와 같은 모양 (server/src/vpn/vpn.types.ts) */
+export interface VpnStatus {
+  configured: boolean;
+  endpointResolvable: boolean | null;
+  tunnel: 'down' | 'starting' | 'up';
+  dbReachable: boolean | null;
 }

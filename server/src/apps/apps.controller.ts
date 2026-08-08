@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Get, Logger, Param, Post } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Logger, Post } from '@nestjs/common';
 
 import { AppsService } from './apps.service';
 import { PublicAppDefinition, toPublic } from './app-definition';
@@ -14,15 +14,8 @@ export class AppsController {
     return { apps: this.apps.list().map(toPublic) };
   }
 
-  @Get(':id')
-  get(@Param('id') id: string): PublicAppDefinition {
-    return toPublic(this.apps.get(id));
-  }
-
-  // reload 는 아래 — 라우트 순서상 :id 보다 뒤여도 method 가 달라 충돌하지 않는다.
-
   /**
-   * apps.yaml 을 다시 읽는다. 배포 없이 앱을 추가·수정할 때 사용.
+   * apps.json 을 다시 읽는다. 배포 없이 앱을 추가·수정할 때 사용.
    * 실패해도 기존 정의는 그대로 유지되며, 어디가 잘못됐는지 그대로 돌려준다.
    */
   @Post('reload')

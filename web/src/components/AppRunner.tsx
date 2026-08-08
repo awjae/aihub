@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import DynamicForm from './DynamicForm';
+import { VpnPanel } from './VpnPanel';
 import ResponsePanel from './ResponsePanel';
 import { runApp } from '../lib/api';
 import { formatRecords, parseRecords } from '../lib/parseRecords';
 import { validate } from '../lib/validate';
+import { canReachPrivateNetwork, describeBlockedReason, useVpnStatus } from '../lib/useVpnStatus';
 import type { AppSummary, ToolLogEntry } from '../lib/types';
 
 interface Props {
@@ -34,7 +36,18 @@ export default function AppRunner({ app }: Props) {
   const abortRef = useRef<AbortController | null>(null);
 
   // 서버가 최종 판정을 하지만, 여기서 먼저 막아 왕복 한 번을 아낀다.
-  const blockedReason = useMemo(() => validate(app, values), [app, values]);
+  const inputError = useMemo(() => validate(app, values), [app, values]);
+
+  // VPC 내부 자원을 쓰는 앱은 실제로 닿을 때만 실행을 허용한다. 막아두지 않으면
+  // 사용자가 제출하고 수십 초 기다린 끝에 커넥션 실패만 보게 된다.
+  //
+  // 상태를 여기서 한 번만 읽어 VPN 패널과 실행 잠금이 같은 값을 본다.
+  const { status: vpnStatus, setStatus: setVpnStatus } = useVpnStatus({
+    enabled: app.requiresVpn,
+    paused: status === 'running',
+  });
+  const vpnBlocked = app.requiresVpn && !canReachPrivateNetwork(vpnStatus);
+  const blockedReason = inputError ?? (vpnBlocked ? describeBlockedReason(vpnStatus) : null);
 
   // 앱이 records 포맷일 때만 파싱한다. 파싱 실패 시 null → 원문 그대로 표시.
   const recordsFormat = app.responseFormat.type === 'records' ? app.responseFormat : null;
@@ -167,6 +180,8 @@ export default function AppRunner({ app }: Props) {
           {app.description && <p className="panel-desc">{app.description}</p>}
           {app.hasTools && <span className="tag">사내 도구 연동</span>}
         </header>
+
+        {app.requiresVpn && <VpnPanel status={vpnStatus} onStatus={setVpnStatus} />}
 
         <DynamicForm
           app={app}

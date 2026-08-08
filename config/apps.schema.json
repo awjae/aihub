@@ -316,6 +316,11 @@
             "items": {
               "type": "string"
             }
+          },
+          "requiresVpn": {
+            "default": false,
+            "description": "VPC 내부 자원을 쓰는 앱. 연결되기 전에는 실행 버튼이 잠깁니다.",
+            "type": "boolean"
           }
         },
         "required": [
