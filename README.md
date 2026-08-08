@@ -23,9 +23,12 @@ NestJS 게이트웨이 — 앱의 mode 로 갈림
 ## 빠른 시작
 
 ```bash
-cp .env.example .env      # API 키 채우기
-docker compose up --build # → http://localhost:3000
+cp .env.example .env       # API 키 채우기
+npm run env:deploy         # .env → .env.deploy (도커용 경로로 변환)
+docker compose up --build  # → http://localhost:3000
 ```
+
+`.env` 는 로컬 실행(cwd 가 `server/`) 기준이고, 컨테이너는 `/app` 에서 돌아 경로가 어긋납니다. `.env.deploy` 는 `.env` 에서 파생된 도커용 파일이라 **시크릿의 원본은 `.env` 하나뿐**입니다 — 값을 바꾸면 `npm run env:deploy` 를 다시 돌리세요 (`npm run env:check` 로 어긋남 확인).
 
 배포용 이미지 말기 (로컬에서 빌드 → ECR):
 

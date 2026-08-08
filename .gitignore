@@ -1,7 +1,9 @@
 node_modules/
 dist/
+# .env 계열은 전부 시크릿. 예시 파일만 추적한다.
 .env
-.env.local
+.env.*
+!.env.example
 *.log
 .DS_Store
 *.tsbuildinfo
