@@ -39,18 +39,23 @@ services:
       # 위 마운트로 이미 들어가므로 볼륨을 더 추가할 필요가 없습니다.
       # 파일이 없으면 VPN 기능만 꺼진 채로 나머지가 그대로 동작합니다.
 
-    # ── Client VPN 을 쓸 때만 주석을 푸세요 ─────────────────────────
-    # 컨테이너 안에서 openvpn 이 터널을 세우려면 필요합니다. VPN 을 쓰지 않으면
-    # 이 셋 없이 USER node 그대로 돌아갑니다 — 기본 권한을 올리지 않기 위해
-    # 옵트인으로 둡니다.
+    # ── Client VPN 용 권한 ──────────────────────────────────────────
+    # 컨테이너 안에서 openvpn 이 터널을 세우려면 이 셋이 필요합니다. 이 저장소는
+    # VPC 밖 배포를 기본으로 보므로 켠 채로 둡니다.
     #
     # ⚠️ user: root 는 게이트웨이 프로세스도 root 로 만듭니다. openvpn 이 tun
     #    장치와 라우팅 테이블을 건드려야 해서 필요합니다.
-    # cap_add:
-    #   - NET_ADMIN
-    # devices:
-    #   - /dev/net/tun:/dev/net/tun
-    # user: root
+    #
+    # VPC 안에 띄워 VPN 이 필요 없다면 이 셋을 주석 처리하세요 — 그러면 USER node
+    # 그대로 돌고, VPN 기능만 꺼진 채 나머지는 그대로 동작합니다.
+    #
+    # ECS 로 옮길 때는 EC2 시작 유형이어야 합니다. Fargate 는 devices 를 지원하지
+    # 않고 capabilities.add 도 SYS_PTRACE 만 허용합니다 (README 참고).
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    user: root
 
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/api/health']

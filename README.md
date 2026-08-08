@@ -277,7 +277,8 @@ cp ../akita/.ovpn/production.ovpn config/production.ovpn
 # .env
 VPN_OVPN_CONFIG=/app/config/production.ovpn
 
-# docker-compose.yml 에서 cap_add / devices / user: root 주석 해제
+# 터널용 권한(cap_add / devices / user: root)은 docker-compose.yml 에 이미 켜져 있습니다.
+# VPC 안에 띄워 VPN 이 필요 없으면 거기서 주석 처리하세요.
 docker compose up -d --build
 ```
 
