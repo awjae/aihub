@@ -23,9 +23,12 @@ NestJS 게이트웨이 — 앱의 mode 로 갈림
 ## 빠른 시작
 
 ```bash
-cp .env.example .env      # API 키 채우기
-docker compose up --build # → http://localhost:3000
+cp .env.example .env       # API 키 채우기
+npm run env:deploy         # .env → .env.deploy (도커용 경로로 변환)
+docker compose up --build  # → http://localhost:3000
 ```
+
+`.env` 는 로컬 실행(cwd 가 `server/`) 기준이고, 컨테이너는 `/app` 에서 돌아 경로가 어긋납니다. `.env.deploy` 는 `.env` 에서 파생된 도커용 파일이라 **시크릿의 원본은 `.env` 하나뿐**입니다 — 값을 바꾸면 `npm run env:deploy` 를 다시 돌리세요 (`npm run env:check` 로 어긋남 확인).
 
 배포용 이미지 말기 (로컬에서 빌드 → ECR):
 
@@ -277,7 +280,8 @@ cp ../akita/.ovpn/production.ovpn config/production.ovpn
 # .env
 VPN_OVPN_CONFIG=/app/config/production.ovpn
 
-# docker-compose.yml 에서 cap_add / devices / user: root 주석 해제
+# 터널용 권한(cap_add / devices / user: root)은 docker-compose.yml 에 이미 켜져 있습니다.
+# VPC 안에 띄워 VPN 이 필요 없으면 거기서 주석 처리하세요.
 docker compose up -d --build
 ```
 
@@ -372,4 +376,4 @@ web/src/
 scripts/              이미지 빌드·검증·push
 ```
 
-프로바이더 어댑터는 **각자 벤더 네이티브 포맷으로 히스토리를 보관**합니다. 중립 포맷으로 매 턴 왕복시키면 벤더 고유 블록(reasoning·서명 등)처럼 다음 턴에 그대로 돌려줘야 하는 정보가 유실되기 때문입니다.
+프로바이더 어댑터는 **각자 벤더 네이티브 포맷으로 히스토리를 보관**합니다. 중립 포맷으로 매 턴 왕복시키면 벤더 고유 블록(reasoning·서명 등)처럼 다음 턴에 그대로 돌려줘야 하는 정보가 유실되기 때문입니다. 지금은 어댑터가 하나뿐이지만, 벤더를 추가할 때는 이 규칙대로 새 어댑터를 만드세요.

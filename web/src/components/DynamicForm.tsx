@@ -63,8 +63,6 @@ export default function DynamicForm({
       <button className="btn-primary" type="submit" disabled={disabled || blockedReason !== null}>
         {disabled ? '실행 중…' : '실행'}
       </button>
-
-      <p className="form-hint">{blockedReason ?? '⌘/Ctrl + Enter 로도 실행할 수 있습니다.'}</p>
     </form>
   );
 }
